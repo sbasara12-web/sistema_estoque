@@ -1,1 +1,6 @@
-**/__pycache__/
+__pycache__/
+*.pyc
+.venv/
+venv/
+estoque.db
+.pytest_cache/

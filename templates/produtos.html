@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Sistema de Estoque</title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 24px;
+            background: #f5f7fa;
+            color: #202938;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        section {
+            background: white;
+            padding: 18px;
+            margin: 18px 0;
+            border-radius: 9px;
+            box-shadow: 0 2px 8px #0001;
+        }
+
+        input, select, button {
+            padding: 9px;
+            margin: 4px;
+            border: 1px solid #ccd3dd;
+            border-radius: 5px;
+        }
+
+        button {
+            background: #174ea6;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            background: white;
+        }
+
+        td, th {
+            padding: 9px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+
+        .erro {
+            color: #b42318;
+        }
+
+        .sucesso {
+            color: #067647;
+        }
+
+        .alerta {
+            background: #fff3cd;
+            padding: 8px;
+            margin: 5px;
+        }
+
+        form.inline {
+            display: inline;
+        }
+
+        a {
+            color: #174ea6;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<header>
+
+    <div>
+
+        <h1>Controle de Estoque</h1>
+
+        <p>
+            Usuário: {{ usuario_logado }}
+            |
+            Perfil: {{ perfil_logado }}
+        </p>
+
+    </div>
+
+    <a href="{{ url_for('auth.logout') }}">
+        Sair
+    </a>
+
+</header>
+
+
+{% with mensagens = get_flashed_messages(with_categories=true) %}
+
+    {% for tipo, mensagem in mensagens %}
+
+        <p class="{{ tipo }}">
+            {{ mensagem }}
+        </p>
+
+    {% endfor %}
+
+{% endwith %}
+
+
+{% if alertas %}
+
+<section>
+
+    <h3>Alertas de estoque</h3>
+
+    {% for p in alertas %}
+
+        <p class="alerta">
+
+            {{ p.nome }}
+
+            — Quantidade: {{ p.quantidade }}
+
+            (Mínimo: {{ p.estoque_minimo }}
+
+            / Máximo: {{ p.estoque_maximo }})
+
+        </p>
+
+    {% endfor %}
+
+</section>
+
+{% endif %}
+
+
+<section>
+
+    <h2>Cadastrar produto</h2>
+
+    <form
+        method="POST"
+        action="{{ url_for('produtos.cadastrar') }}"
+    >
+
+        <input
+            name="nome"
+            placeholder="Denominação"
+            required
+        >
+
+        <input
+            name="valor"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="Valor unitário"
+            required
+        >
+
+        <input
+            name="quantidade"
+            type="number"
+            min="0"
+            placeholder="Quantidade"
+            required
+        >
+
+        <input
+            name="minimo"
+            type="number"
+            min="0"
+            placeholder="Estoque mínimo"
+            required
+        >
+
+        <input
+            name="maximo"
+            type="number"
+            min="0"
+            placeholder="Estoque máximo"
+            required
+        >
+
+        <button type="submit">
+            Cadastrar
+        </button>
+
+    </form>
+
+</section>
+
+
+<section>
+
+    <h2>Produtos cadastrados</h2>
+
+    <table>
+
+        <tr>
+            <th>Nome</th>
+            <th>Valor</th>
+            <th>Quantidade</th>
+            <th>Mínimo</th>
+            <th>Máximo</th>
+            <th>Ações</th>
+        </tr>
+
+        {% for p in produtos %}
+
+        <tr>
+
+            <td>{{ p.nome }}</td>
+
+            <td>
+                R$ {{ '%.2f'|format(p.valor) }}
+            </td>
+
+            <td>{{ p.quantidade }}</td>
+
+            <td>{{ p.estoque_minimo }}</td>
+
+            <td>{{ p.estoque_maximo }}</td>
+
+            <td>
+
+                <details>
+
+                    <summary>Editar</summary>
+
+                    <form
+                        method="POST"
+                        action="{{ url_for('produtos.editar', id=p.id) }}"
+                    >
+
+                        <input
+                            name="nome"
+                            value="{{ p.nome }}"
+                            required
+                        >
+
+                        <input
+                            name="valor"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value="{{ p.valor }}"
+                            required
+                        >
+
+                        <input
+                            name="minimo"
+                            type="number"
+                            min="0"
+                            value="{{ p.estoque_minimo }}"
+                            required
+                        >
+
+                        <input
+                            name="maximo"
+                            type="number"
+                            min="0"
+                            value="{{ p.estoque_maximo }}"
+                            required
+                        >
+
+                        <button type="submit">
+                            Salvar
+                        </button>
+
+                    </form>
+
+                </details>
+
+                {% if perfil_logado == 'administrador' %}
+
+                <form
+                    class="inline"
+                    method="POST"
+                    action="{{ url_for('produtos.excluir', id=p.id) }}"
+                    onsubmit="return confirm('Deseja excluir este produto?')"
+                >
+
+                    <button type="submit">
+                        Excluir
+                    </button>
+
+                </form>
+
+                {% endif %}
+
+            </td>
+
+        </tr>
+
+        {% else %}
+
+        <tr>
+            <td colspan="6">
+                Nenhum produto cadastrado.
+            </td>
+        </tr>
+
+        {% endfor %}
+
+    </table>
+
+</section>
+
+
+{% if perfil_logado == 'administrador' %}
+
+<section>
+
+    <h2>Cadastrar usuário</h2>
+
+    <form
+        method="POST"
+        action="{{ url_for('auth.cadastrar_usuario') }}"
+    >
+
+        <input
+            name="nome"
+            placeholder="Nome completo"
+            required
+        >
+
+        <input
+            name="novo_usuario"
+            placeholder="Nome de usuário"
+            required
+        >
+
+        <input
+            type="password"
+            name="nova_senha"
+            placeholder="Senha (mínimo 6 caracteres)"
+            minlength="6"
+            required
+        >
+
+        <select name="perfil">
+
+            <option value="operador">
+                Operador
+            </option>
+
+            <option value="administrador">
+                Administrador
+            </option>
+
+        </select>
+
+        <button type="submit">
+            Cadastrar usuário
+        </button>
+
+    </form>
+
+</section>
+
+{% endif %}
+
+
+<section>
+
+    <h2>Movimentar estoque</h2>
+
+    <form
+        method="POST"
+        action="{{ url_for('estoque.movimentar') }}"
+    >
+
+        <select name="produto_id" required>
+
+            {% for p in produtos %}
+
+            <option value="{{ p.id }}">
+
+                {{ p.nome }}
+                ({{ p.quantidade }} disponíveis)
+
+            </option>
+
+            {% endfor %}
+
+        </select>
+
+        <select name="tipo">
+
+            <option value="entrada">
+                Entrada
+            </option>
+
+            <option value="saida">
+                Saída
+            </option>
+
+        </select>
+
+        <input
+            type="number"
+            name="quantidade"
+            min="1"
+            placeholder="Quantidade"
+            required
+        >
+
+        <button type="submit">
+            Registrar movimentação
+        </button>
+
+    </form>
+
+</section>
+
+
+<section>
+
+    <h2>Histórico de movimentações</h2>
+
+    <a href="{{ url_for('estoque.movimentacoes') }}">
+        Atualizar histórico
+    </a>
+
+    {% if movimentacoes %}
+
+    <table>
+
+        <tr>
+            <th>Data</th>
+            <th>Produto</th>
+            <th>Tipo</th>
+            <th>Quantidade</th>
+            <th>Usuário</th>
+        </tr>
+
+        {% for m in movimentacoes %}
+
+        <tr>
+
+            <td>{{ m.data_hora }}</td>
+            <td>{{ m.produto_nome }}</td>
+            <td>{{ m.tipo }}</td>
+            <td>{{ m.quantidade }}</td>
+            <td>{{ m.usuario }}</td>
+
+        </tr>
+
+        {% endfor %}
+
+    </table>
+
+    {% endif %}
+
+</section>
+
+
+<section>
+
+    <h2>Relatório por período</h2>
+
+    <form
+        method="GET"
+        action="{{ url_for('estoque.relatorio') }}"
+    >
+
+        <label>Data inicial</label>
+
+        <input
+            type="date"
+            name="inicio"
+            value="{{ inicio or '' }}"
+            required
+        >
+
+        <label>Data final</label>
+
+        <input
+            type="date"
+            name="fim"
+            value="{{ fim or '' }}"
+            required
+        >
+
+        <button type="submit">
+            Consultar
+        </button>
+
+    </form>
+
+
+    {% if relatorio is defined %}
+
+    <table>
+
+        <tr>
+            <th>Produto</th>
+            <th>Entradas</th>
+            <th>Saídas</th>
+            <th>Saldo</th>
+            <th>Valor entradas</th>
+            <th>Valor saídas</th>
+        </tr>
+
+        {% for r in relatorio %}
+
+        <tr>
+
+            <td>{{ r.nome }}</td>
+            <td>{{ r.entradas }}</td>
+            <td>{{ r.saidas }}</td>
+            <td>{{ r.saldo }}</td>
+
+            <td>
+                R$ {{ '%.2f'|format(r.valor_entradas) }}
+            </td>
+
+            <td>
+                R$ {{ '%.2f'|format(r.valor_saidas) }}
+            </td>
+
+        </tr>
+
+        {% endfor %}
+
+    </table>
+
+    {% endif %}
+
+</section>
+
+</body>
+</html>
